@@ -1,0 +1,17 @@
+.editorBody {
+    border: 2px solid;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    padding: 4px;
+    white-space: pre;
+    overflow: auto;
+    line-height: 1.5;
+    transition: 0.1s;
+    max-width: 100% !important;
+    caret-color: #999;
+}
+
+.editorBody:focus {
+    padding: 4px;
+    outline: none;
+}

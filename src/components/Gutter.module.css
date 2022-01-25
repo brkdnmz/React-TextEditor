@@ -1,0 +1,9 @@
+.gutter {
+    padding-top: 6px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.gutter .lineNumber {
+    transition: 0.1s;
+}
