@@ -1,0 +1,18 @@
+.App {
+    background: linear-gradient(43deg, #5abafc, #ff6ad6);
+    background-size: 400% 400%;
+
+    animation: slide 20s linear infinite;
+}
+
+@keyframes slide {
+    0% {
+        background-position: 0% 50%
+    }
+    50% {
+        background-position: 100% 50%
+    }
+    100% {
+        background-position: 0% 50%
+    }
+}

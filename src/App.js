@@ -4,6 +4,7 @@ import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import Grid from "@mui/material/Grid";
 import Editor from "./components/Editor";
+import styles from "./App.module.css";
 
 function App() {
   return (
@@ -11,11 +12,7 @@ function App() {
       container
       minHeight={"100vh"}
       justifyContent={"center"}
-      // bgcolor={"rgb(227,227,227)"}
-      sx={{
-        background:
-          "linear-gradient(45deg, rgba(90,186,252,1) 0%, rgba(255,106,214,1) 100%)",
-      }}
+      className={styles.App}
     >
       <Grid
         container

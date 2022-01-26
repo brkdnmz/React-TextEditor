@@ -6,11 +6,10 @@ import EditorHeader from "./EditorHeader";
 import Gutter from "./Gutter";
 import $ from "jquery";
 import styles from "./Editor.module.css";
-import { nextLeafNode } from "../utils/Editor_utils";
+import { createEmptyLine, isEmpty, textLength } from "../utils/Editor_utils";
 
 function Editor() {
   const [fontSize, setFontSize] = useState(24);
-  const [inputText, setInputText] = useState("");
   const [paperElevation, setPaperElevation] = useState(1);
   const [lineCount, setLineCount] = useState(1);
   const [focusedLines, setFocusedLines] = useState([]);
@@ -27,74 +26,175 @@ function Editor() {
     setFontSize((fontSize) => Math.max(12, fontSize - 4));
   };
 
-  const handleHover = () => {
-    if ($(editorRef.current).is(":focus")) return;
-    setBorderColor("#ccc");
+  const incrementCursorPos = () => {
+    setCursorPos((cursorPos) => cursorPos + 1);
   };
 
-  const handleUnHover = () => {
-    if ($(editorRef.current).is(":focus")) return;
-    setBorderColor("#eee");
+  const deccrementCursorPos = () => {
+    setCursorPos((cursorPos) => Math.max(0, cursorPos - 1));
   };
 
-  const handleFocus = () => {
-    setBorderColor("#aaa");
-    setPaperElevation(10);
+  const incrementLineCount = () => {
+    setLineCount((lineCount) => lineCount + 1);
   };
 
-  const handleBlur = () => {
-    setBorderColor("#eee");
-    setPaperElevation(1);
-    setFocusedLines([]);
+  const decrementLineCount = () => {
+    setLineCount((lineCount) => Math.max(0, lineCount - 1));
+  };
+
+  const handleClick = () => {
+    const range = getSelection().getRangeAt(0);
+
+    let curNode = range.startContainer;
+    if (!isEmpty(curNode)) curNode = curNode.parentNode;
+    let newPos = range.startOffset + (curNode.previousSibling !== null);
+
+    while (1) {
+      curNode = curNode.previousSibling;
+
+      if (!curNode) break;
+
+      if (!isEmpty(curNode)) newPos += textLength(curNode);
+      if (curNode.previousSibling) newPos++;
+    }
+    console.log(newPos);
+    setCursorPos(() => newPos);
   };
 
   const handleKeyDown = (e) => {
     if (e.ctrlKey) return;
-    setInputText($(editorRef.current).html());
+
+    e.preventDefault();
+
+    const editor = editorRef.current;
+    const range = getSelection().getRangeAt(0);
+    let cursorNode = range.startContainer;
+
     if (e.key === "Enter") {
+      if (range.collapsed) {
+        if (!isEmpty(cursorNode)) {
+          cursorNode = cursorNode.parentNode;
+        }
+
+        if (
+          isEmpty(cursorNode) ||
+          range.startOffset === textLength(cursorNode)
+        ) {
+          editor.insertBefore(createEmptyLine(), cursorNode.nextSibling);
+        } else {
+          let leftPart = document.createElement("div");
+          leftPart.textContent = cursorNode.textContent.slice(
+            0,
+            range.startOffset
+          );
+
+          let rightPart = document.createElement("div");
+          rightPart.textContent = cursorNode.textContent.slice(
+            range.startOffset
+          );
+
+          editor.insertBefore(leftPart, cursorNode);
+          editor.insertBefore(rightPart, cursorNode);
+
+          cursorNode.remove();
+        }
+
+        incrementCursorPos();
+        incrementLineCount();
+      }
+    } else if (e.key === "Backspace") {
+      if (range.collapsed) {
+        if (!isEmpty(cursorNode)) {
+          cursorNode.textContent =
+            cursorNode.textContent.slice(0, range.startOffset - 1) +
+            cursorNode.textContent.slice(range.startOffset);
+
+          if (!cursorNode.textContent) {
+            cursorNode.parentNode.innerHTML = "<br>";
+          }
+        } else if (cursorNode.previousSibling) {
+          cursorNode.remove();
+          decrementLineCount();
+        }
+
+        deccrementCursorPos();
+      }
+    } else if (e.key === "Delete") {
       /* TODO */
-    }
-    if (e.key === "Backspace") {
-      setCursorPos((cursorPos) => Math.max(0, cursorPos - 1));
-    } else if (e.key !== "Delete") {
-      setCursorPos((cursorPos) => cursorPos + 1);
+    } else if (
+      (47 < e.which && e.which < 58) ||
+      (64 < e.which && e.which < 91)
+    ) {
+      if (!isEmpty(cursorNode)) {
+        cursorNode.textContent =
+          cursorNode.textContent.slice(0, range.startOffset) +
+          e.key +
+          cursorNode.textContent.slice(range.startOffset);
+      } else {
+        cursorNode.textContent = e.key;
+      }
+
+      incrementCursorPos();
+    } else if (e.key === "ArrowLeft") {
+      deccrementCursorPos();
+    } else if (e.key === "ArrowRight") {
+      if (cursorPos <= textLength(editor) + lineCount - 1) {
+        incrementCursorPos();
+      }
     }
   };
 
+  /**
+   * Initialize the editor with an empty line
+   */
   useEffect(() => {
     if (!editorRef.current) return;
-    $(editorRef.current).html(inputText);
-  }, [inputText]);
 
+    $(editorRef.current).html("<div><br></div>");
+  }, []);
+
+  /**
+   * Update the cursor position
+   */
   useEffect(() => {
     if (!editorRef.current) return;
 
-    let curNode = editorRef.current;
-    let leftLength = inputText.length;
+    let root = editorRef.current;
+    let targetNode = null;
+    let offset = cursorPos;
 
-    console.log("cursor:", cursorPos);
-
-    while (curNode.firstChild) {
-      for (const child of curNode.childNodes) {
-        if (leftLength <= child.textContent.length) {
-          curNode = child;
+    for (const child of root.childNodes) {
+      if (isEmpty(child)) {
+        if (offset === 0) {
+          targetNode = child;
           break;
         }
-        leftLength -= child.textContent.length;
+
+        offset--;
+        if (offset === 0 && !child.nextSibling) {
+          targetNode = child;
+        }
+      } else {
+        if (offset <= textLength(child)) {
+          targetNode = child.firstChild;
+          break;
+        }
+        offset -= textLength(child) + 1;
       }
     }
 
-    $(editorRef.current).focus();
     const sel = getSelection();
+
+    if (!sel.rangeCount) return;
+
     const range = sel.getRangeAt(0);
-    const offset = leftLength <= curNode.textContent.length ? leftLength : 0;
-    console.log(offset);
-    range.setStart(curNode, offset);
+    range.setStart(targetNode, offset);
+    range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
-  }, [cursorPos, inputText]);
+  }, [cursorPos]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     const updateFocusedLines = (e) => {
       if (document.activeElement !== editorRef.current) return;
 
@@ -111,7 +211,7 @@ function Editor() {
       const lastNode = range.endContainer;
 
       while (curNode !== lastNode) {
-        len += curNode.textContent.length;
+        len += textLength(curNode);
         if (curNode === range.startContainer) len -= range.startOffset;
         curNode = nextLeafNode(curNode);
       }
@@ -123,18 +223,34 @@ function Editor() {
     return () => {
       $(document).off("selectionchange");
     };
-  }, []);
+  }, []);*/
 
   useEffect(() => {
     if (!editorRef.current) return;
-    // $(editorRef.current).html(
-    //   "x<strong>abc</strong>y<strong><em>asdsaas</em></strong>asdsa"
-    // );
-  }, []);
 
-  useEffect(() => {
-    if (!editorRef.current) return;
-    let elem = editorRef.current;
+    const handleHover = () => {
+      if ($(editorRef.current).is(":focus")) return;
+      setBorderColor("#ccc");
+    };
+
+    const handleUnHover = () => {
+      if ($(editorRef.current).is(":focus")) return;
+      setBorderColor("#eee");
+    };
+
+    const handleFocus = () => {
+      setBorderColor("#aaa");
+      setPaperElevation(10);
+    };
+
+    const handleBlur = () => {
+      setBorderColor("#eee");
+      setPaperElevation(1);
+      setFocusedLines([]);
+    };
+
+    const elem = editorRef.current;
+
     $(elem).hover(
       () => handleHover(),
       () => handleUnHover()
@@ -152,7 +268,7 @@ function Editor() {
   useEffect(() => {
     if (!editorRef.current) return;
 
-    let elem = editorRef.current;
+    const elem = editorRef.current;
 
     elem.onwheel = (e) => {
       if (!e.ctrlKey) return;
@@ -206,6 +322,7 @@ function Editor() {
           >
             <Gutter xs={"auto"} bgcolor={borderColor} />
             <Grid
+              display={"inline-block"}
               item
               xs
               contentEditable
@@ -215,6 +332,7 @@ function Editor() {
               ref={editorRef}
               fontSize={fontSize}
               onKeyDown={(e) => handleKeyDown(e)}
+              onClick={() => handleClick()}
             />
           </Grid>
         </Grid>

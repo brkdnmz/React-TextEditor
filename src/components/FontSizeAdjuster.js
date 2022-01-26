@@ -1,5 +1,7 @@
 import Grid from "@mui/material/Grid";
 import { MdKeyboardArrowDown, MdKeyboardArrowUp } from "react-icons/md";
+import { useEffect, useRef } from "react";
+import $ from "jquery";
 
 function FontSizeAdjuster(props) {
   return (
@@ -10,25 +12,23 @@ function FontSizeAdjuster(props) {
       alignItems={"center"}
       sx={{ cursor: "pointer" }}
     >
-      <Grid display={"inline-flex"}>
-        <MdKeyboardArrowUp
-          color={"#fff"}
-          fontSize={"21px"}
-          onMouseEnter={(e) => props.handleIncreaseMouseEnter(e)}
-          onMouseLeave={(e) => props.handleIncreaseMouseLeave(e)}
-          onMouseDown={(e) => props.handleIncreaseMouseDown(e)}
-          onMouseUp={(e) => props.handleIncreaseMouseUp(e)}
-        />
+      <Grid
+        display={"inline-flex"}
+        onMouseEnter={(e) => props.handleIncreaseMouseEnter(e)}
+        onMouseLeave={(e) => props.handleIncreaseMouseLeave(e)}
+        onMouseDown={(e) => props.handleIncreaseMouseDown(e)}
+        onMouseUp={(e) => props.handleIncreaseMouseUp(e)}
+      >
+        <MdKeyboardArrowUp color={"#fff"} fontSize={"21px"} />
       </Grid>
-      <Grid display={"inline-flex"}>
-        <MdKeyboardArrowDown
-          color={"#fff"}
-          fontSize={"21px"}
-          onMouseEnter={(e) => props.handleDecreaseMouseEnter(e)}
-          onMouseLeave={(e) => props.handleDecreaseMouseLeave(e)}
-          onMouseDown={(e) => props.handleDecreaseMouseDown(e)}
-          onMouseUp={(e) => props.handleDecreaseMouseUp(e)}
-        />
+      <Grid
+        display={"inline-flex"}
+        onMouseEnter={(e) => props.handleDecreaseMouseEnter(e)}
+        onMouseLeave={(e) => props.handleDecreaseMouseLeave(e)}
+        onMouseDown={(e) => props.handleDecreaseMouseDown(e)}
+        onMouseUp={(e) => props.handleDecreaseMouseUp(e)}
+      >
+        <MdKeyboardArrowDown color={"#fff"} fontSize={"21px"} />
       </Grid>
     </Grid>
   );

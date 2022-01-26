@@ -14,6 +14,7 @@ function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
   const [intervalId, setIntervalId] = useState(0);
   const holdTimeout = 400;
   const holdInterval = 50;
+
   const handleIncreaseMouseEnter = (e) => {
     e.preventDefault();
     e.target.style.color = "rgb(0,255,0)";
@@ -100,13 +101,13 @@ function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
   return (
     <>
       <Grid item display={"inline-flex"} xs justifyContent={"end"}>
-        <Typography variant="h4" style={{ userSelect: "none" }}>
+        <Typography variant="h4" style={{ userSelect: "none" }} color={"white"}>
           Font size: {fontSize}
         </Typography>
       </Grid>
       <FontSizeAdjuster {...fontSizeAdjusterProps} />
       <Grid item display={"inline-flex"}>
-        <Typography variant="h4" style={{ userSelect: "none" }}>
+        <Typography variant="h4" style={{ userSelect: "none" }} color={"white"}>
           px
           <Tooltip
             title={
@@ -143,7 +144,7 @@ function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
             arrow
           >
             <sup>
-              <BsFillQuestionCircleFill fontSize={15} color={"white"} />
+              <BsFillQuestionCircleFill fontSize={15} color={"lightgray"} />
             </sup>
           </Tooltip>
         </Typography>
