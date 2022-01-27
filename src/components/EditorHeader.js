@@ -1,7 +1,8 @@
 import React, { useContext } from "react";
 import Grid from "@mui/material/Grid";
 import StylingButton from "./StylingButton";
-import { FaBold, FaItalic } from "react-icons/fa";
+import { FaBold } from "@react-icons/all-files/fa/FaBold";
+import { FaItalic } from "@react-icons/all-files/fa/FaItalic";
 import FontSizeDisplay from "./FontSizeDisplay";
 import MainContext from "../MainContext";
 

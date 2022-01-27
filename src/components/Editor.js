@@ -7,6 +7,7 @@ import Gutter from "./Gutter";
 import $ from "jquery";
 import styles from "./Editor.module.css";
 import { createEmptyLine, isEmpty, textLength } from "../utils/Editor_utils";
+import { wait } from "@testing-library/user-event/dist/utils";
 
 function Editor() {
   const [fontSize, setFontSize] = useState(24);
@@ -42,7 +43,7 @@ function Editor() {
     setLineCount((lineCount) => Math.max(0, lineCount - 1));
   };
 
-  const handleClick = () => {
+  const handleClick = (e) => {
     const range = getSelection().getRangeAt(0);
 
     let curNode = range.startContainer;
@@ -57,8 +58,11 @@ function Editor() {
       if (!isEmpty(curNode)) newPos += textLength(curNode);
       if (curNode.previousSibling) newPos++;
     }
-    console.log(newPos);
-    setCursorPos(() => newPos);
+
+    setCursorPos((cursorPos) => {
+      console.log("click", cursorPos);
+      return newPos;
+    });
   };
 
   const handleKeyDown = (e) => {
@@ -104,7 +108,7 @@ function Editor() {
       }
     } else if (e.key === "Backspace") {
       if (range.collapsed) {
-        if (!isEmpty(cursorNode)) {
+        if (range.startOffset) {
           cursorNode.textContent =
             cursorNode.textContent.slice(0, range.startOffset - 1) +
             cursorNode.textContent.slice(range.startOffset);
@@ -112,9 +116,21 @@ function Editor() {
           if (!cursorNode.textContent) {
             cursorNode.parentNode.innerHTML = "<br>";
           }
-        } else if (cursorNode.previousSibling) {
-          cursorNode.remove();
-          decrementLineCount();
+        } else {
+          if (!isEmpty(cursorNode)) cursorNode = cursorNode.parentNode;
+          if (cursorNode.previousSibling) {
+            const combinedNode = createEmptyLine();
+
+            if (!isEmpty(cursorNode) || !isEmpty(cursorNode.previousSibling)) {
+              combinedNode.textContent =
+                cursorNode.previousSibling.textContent + cursorNode.textContent;
+            }
+
+            cursorNode.previousSibling.remove();
+            editor.insertBefore(combinedNode, cursorNode);
+            cursorNode.remove();
+            decrementLineCount();
+          }
         }
 
         deccrementCursorPos();
@@ -123,7 +139,8 @@ function Editor() {
       /* TODO */
     } else if (
       (47 < e.which && e.which < 58) ||
-      (64 < e.which && e.which < 91)
+      (64 < e.which && e.which < 91) ||
+      e.key === " "
     ) {
       if (!isEmpty(cursorNode)) {
         cursorNode.textContent =
@@ -138,7 +155,7 @@ function Editor() {
     } else if (e.key === "ArrowLeft") {
       deccrementCursorPos();
     } else if (e.key === "ArrowRight") {
-      if (cursorPos <= textLength(editor) + lineCount - 1) {
+      if (cursorPos < textLength(editor) + lineCount - 1) {
         incrementCursorPos();
       }
     }
@@ -193,37 +210,6 @@ function Editor() {
     sel.removeAllRanges();
     sel.addRange(range);
   }, [cursorPos]);
-
-  /*useEffect(() => {
-    const updateFocusedLines = (e) => {
-      if (document.activeElement !== editorRef.current) return;
-
-      const sel = getSelection();
-      const range = sel.getRangeAt(0);
-      let len = 0;
-
-      if (range.startContainer === range.endContainer) {
-        len = range.endOffset - range.startOffset;
-        return;
-      }
-
-      let curNode = range.startContainer;
-      const lastNode = range.endContainer;
-
-      while (curNode !== lastNode) {
-        len += textLength(curNode);
-        if (curNode === range.startContainer) len -= range.startOffset;
-        curNode = nextLeafNode(curNode);
-      }
-      len += range.endOffset;
-    };
-
-    $(document).on("selectionchange", (e) => updateFocusedLines(e));
-
-    return () => {
-      $(document).off("selectionchange");
-    };
-  }, []);*/
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -332,7 +318,7 @@ function Editor() {
               ref={editorRef}
               fontSize={fontSize}
               onKeyDown={(e) => handleKeyDown(e)}
-              onClick={() => handleClick()}
+              onClick={(e) => handleClick(e)}
             />
           </Grid>
         </Grid>

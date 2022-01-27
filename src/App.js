@@ -8,12 +8,7 @@ import styles from "./App.module.css";
 
 function App() {
   return (
-    <Grid
-      container
-      minHeight={"100vh"}
-      justifyContent={"center"}
-      className={styles.App}
-    >
+    <Grid container className={styles.App}>
       <Grid
         container
         item

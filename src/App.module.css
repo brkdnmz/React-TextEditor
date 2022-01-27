@@ -1,7 +1,8 @@
 .App {
+    min-height: 100vh;
+    justify-content: center;
     background: linear-gradient(43deg, #5abafc, #ff6ad6);
     background-size: 400% 400%;
-
     animation: slide 20s linear infinite;
 }
 

@@ -1,7 +1,6 @@
 import Grid from "@mui/material/Grid";
-import { MdKeyboardArrowDown, MdKeyboardArrowUp } from "react-icons/md";
-import { useEffect, useRef } from "react";
-import $ from "jquery";
+import { MdKeyboardArrowDown } from "@react-icons/all-files/md/MdKeyboardArrowDown";
+import { MdKeyboardArrowUp } from "@react-icons/all-files/md/MdKeyboardArrowUp";
 
 function FontSizeAdjuster(props) {
   return (

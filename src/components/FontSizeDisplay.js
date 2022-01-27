@@ -3,10 +3,11 @@ import Grid from "@mui/material/Grid";
 import { useContext, useState } from "react";
 import MainContext from "../MainContext";
 import FontSizeAdjuster from "./FontSizeAdjuster";
-import { BsFillQuestionCircleFill, BsMouse } from "react-icons/bs";
+import { BsFillQuestionCircleFill } from "@react-icons/all-files/bs/BsFillQuestionCircleFill";
+import { BiMouse } from "@react-icons/all-files/bi/BiMouse";
 import Tooltip from "@mui/material/Tooltip";
 import Zoom from "@mui/material/Zoom";
-import { CgArrowsVAlt } from "react-icons/cg";
+import { CgArrowsVAlt } from "@react-icons/all-files/cg/CgArrowsVAlt";
 
 function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
   const { setFontSize } = useContext(MainContext);
@@ -126,7 +127,7 @@ function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
                 </Typography>
                 <br />
                 <Typography variant={"body2"}>
-                  You can also use <code>Ctrl</code> + <BsMouse fontSize={16} />
+                  You can also use <code>Ctrl</code> + <BiMouse fontSize={16} />
                   <CgArrowsVAlt fontSize={16} />
                   inside the editor to adjust the font size.
                 </Typography>
