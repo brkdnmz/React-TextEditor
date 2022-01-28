@@ -15,7 +15,6 @@ function Editor() {
   const [lineCount, setLineCount] = useState(1);
   const [focusedLines, setFocusedLines] = useState([]);
   const [borderColor, setBorderColor] = useState("#eee");
-  const [cursorPos, setCursorPos] = useState(0);
 
   const editorRef = useRef({ current: null });
 
@@ -27,12 +26,17 @@ function Editor() {
     setFontSize((fontSize) => Math.max(12, fontSize - 4));
   };
 
-  const incrementCursorPos = () => {
-    setCursorPos((cursorPos) => cursorPos + 1);
-  };
+  const updateCursorPos = (newCursorInfo) => {
+    const editor = editorRef.current;
+    const range = getSelection().getRangeAt(0);
+    let targetLine = editor.childNodes[newCursorInfo.lineIndex];
 
-  const deccrementCursorPos = () => {
-    setCursorPos((cursorPos) => Math.max(0, cursorPos - 1));
+    if (!isEmpty(targetLine.firstChild)) {
+      targetLine = targetLine.firstChild;
+    }
+
+    range.setStart(targetLine, newCursorInfo.startOffset);
+    range.setEnd(targetLine, newCursorInfo.startOffset);
   };
 
   const incrementLineCount = () => {
@@ -43,28 +47,6 @@ function Editor() {
     setLineCount((lineCount) => Math.max(0, lineCount - 1));
   };
 
-  const handleClick = (e) => {
-    const range = getSelection().getRangeAt(0);
-
-    let curNode = range.startContainer;
-    if (!isEmpty(curNode)) curNode = curNode.parentNode;
-    let newPos = range.startOffset + (curNode.previousSibling !== null);
-
-    while (1) {
-      curNode = curNode.previousSibling;
-
-      if (!curNode) break;
-
-      if (!isEmpty(curNode)) newPos += textLength(curNode);
-      if (curNode.previousSibling) newPos++;
-    }
-
-    setCursorPos((cursorPos) => {
-      console.log("click", cursorPos);
-      return newPos;
-    });
-  };
-
   const handleKeyDown = (e) => {
     if (e.ctrlKey) return;
 
@@ -72,43 +54,49 @@ function Editor() {
 
     const editor = editorRef.current;
     const range = getSelection().getRangeAt(0);
+
     let cursorNode = range.startContainer;
+    let newCursorInfo = {
+      lineIndex: Array.from(editor.childNodes).indexOf(
+        isEmpty(cursorNode) ? cursorNode : cursorNode.parentNode
+      ),
+      startOffset: range.startOffset,
+      endOffset: range.endOffset,
+    };
 
     if (e.key === "Enter") {
       if (range.collapsed) {
-        if (!isEmpty(cursorNode)) {
+        newCursorInfo.lineIndex++;
+        newCursorInfo.startOffset = 0;
+
+        if (!cursorNode.firstChild) {
           cursorNode = cursorNode.parentNode;
         }
 
-        if (
-          isEmpty(cursorNode) ||
-          range.startOffset === textLength(cursorNode)
-        ) {
-          editor.insertBefore(createEmptyLine(), cursorNode.nextSibling);
-        } else {
-          let leftPart = document.createElement("div");
-          leftPart.textContent = cursorNode.textContent.slice(
-            0,
-            range.startOffset
-          );
+        let leftPart = document.createElement("div");
+        leftPart.textContent = cursorNode.textContent.slice(
+          0,
+          range.startOffset
+        );
 
-          let rightPart = document.createElement("div");
-          rightPart.textContent = cursorNode.textContent.slice(
-            range.startOffset
-          );
+        let rightPart = document.createElement("div");
+        rightPart.textContent = cursorNode.textContent.slice(range.startOffset);
 
-          editor.insertBefore(leftPart, cursorNode);
-          editor.insertBefore(rightPart, cursorNode);
+        if (isEmpty(leftPart)) leftPart = createEmptyLine();
+        if (isEmpty(rightPart)) rightPart = createEmptyLine();
 
-          cursorNode.remove();
-        }
+        editor.insertBefore(leftPart, cursorNode);
+        editor.insertBefore(rightPart, cursorNode);
 
-        incrementCursorPos();
+        cursorNode.remove();
+
         incrementLineCount();
       }
     } else if (e.key === "Backspace") {
       if (range.collapsed) {
         if (range.startOffset) {
+          newCursorInfo.startOffset--;
+
           cursorNode.textContent =
             cursorNode.textContent.slice(0, range.startOffset - 1) +
             cursorNode.textContent.slice(range.startOffset);
@@ -118,7 +106,11 @@ function Editor() {
           }
         } else {
           if (!isEmpty(cursorNode)) cursorNode = cursorNode.parentNode;
+
           if (cursorNode.previousSibling) {
+            newCursorInfo.lineIndex--;
+            newCursorInfo.startOffset = textLength(cursorNode.previousSibling);
+
             const combinedNode = createEmptyLine();
 
             if (!isEmpty(cursorNode) || !isEmpty(cursorNode.previousSibling)) {
@@ -129,19 +121,18 @@ function Editor() {
             cursorNode.previousSibling.remove();
             editor.insertBefore(combinedNode, cursorNode);
             cursorNode.remove();
+
             decrementLineCount();
           }
         }
-
-        deccrementCursorPos();
       }
-    } else if (e.key === "Delete") {
-      /* TODO */
     } else if (
       (47 < e.which && e.which < 58) ||
       (64 < e.which && e.which < 91) ||
       e.key === " "
     ) {
+      newCursorInfo.startOffset++;
+
       if (!isEmpty(cursorNode)) {
         cursorNode.textContent =
           cursorNode.textContent.slice(0, range.startOffset) +
@@ -150,15 +141,26 @@ function Editor() {
       } else {
         cursorNode.textContent = e.key;
       }
-
-      incrementCursorPos();
     } else if (e.key === "ArrowLeft") {
-      deccrementCursorPos();
+      if (!isEmpty(cursorNode)) cursorNode = cursorNode.parentNode;
+
+      if (range.startOffset) {
+        newCursorInfo.startOffset--;
+      } else if (cursorNode.previousSibling) {
+        newCursorInfo.lineIndex--;
+        newCursorInfo.startOffset = textLength(cursorNode.previousSibling);
+      }
     } else if (e.key === "ArrowRight") {
-      if (cursorPos < textLength(editor) + lineCount - 1) {
-        incrementCursorPos();
+      if (!isEmpty(cursorNode)) cursorNode = cursorNode.parentNode;
+
+      if (range.startOffset !== cursorNode.textContent.length) {
+        newCursorInfo.startOffset++;
+      } else if (cursorNode.nextSibling) {
+        newCursorInfo.lineIndex++;
+        newCursorInfo.startOffset = 0;
       }
     }
+    updateCursorPos(newCursorInfo);
   };
 
   /**
@@ -169,47 +171,6 @@ function Editor() {
 
     $(editorRef.current).html("<div><br></div>");
   }, []);
-
-  /**
-   * Update the cursor position
-   */
-  useEffect(() => {
-    if (!editorRef.current) return;
-
-    let root = editorRef.current;
-    let targetNode = null;
-    let offset = cursorPos;
-
-    for (const child of root.childNodes) {
-      if (isEmpty(child)) {
-        if (offset === 0) {
-          targetNode = child;
-          break;
-        }
-
-        offset--;
-        if (offset === 0 && !child.nextSibling) {
-          targetNode = child;
-        }
-      } else {
-        if (offset <= textLength(child)) {
-          targetNode = child.firstChild;
-          break;
-        }
-        offset -= textLength(child) + 1;
-      }
-    }
-
-    const sel = getSelection();
-
-    if (!sel.rangeCount) return;
-
-    const range = sel.getRangeAt(0);
-    range.setStart(targetNode, offset);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }, [cursorPos]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -318,7 +279,6 @@ function Editor() {
               ref={editorRef}
               fontSize={fontSize}
               onKeyDown={(e) => handleKeyDown(e)}
-              onClick={(e) => handleClick(e)}
             />
           </Grid>
         </Grid>
