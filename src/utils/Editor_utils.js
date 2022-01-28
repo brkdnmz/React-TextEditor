@@ -41,3 +41,7 @@ export const createEmptyLine = () => {
   line.innerHTML = "<br>";
   return line;
 };
+
+export const isText = (node) => {
+  return node.nodeType === Node.TEXT_NODE;
+};

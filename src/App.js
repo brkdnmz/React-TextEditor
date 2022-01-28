@@ -19,6 +19,7 @@ function App() {
         padding={1}
       >
         <Editor />
+        <Grid item xs /> {/*To prevent focusing editor when clicked below*/}
       </Grid>
     </Grid>
   );

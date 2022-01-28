@@ -2,8 +2,10 @@
     padding-top: 6px;
     border-top-left-radius: 5px;
     border-bottom-left-radius: 5px;
+    transition: 0.1s;
 }
 
 .gutter .lineNumber {
-    transition: 0.1s;
+    transition: 0s;
+    user-select: none;
 }

@@ -1,3 +1,11 @@
+.editorContainer {
+    min-height: 150px;
+    max-height: 500px;
+    overflow: auto;
+    margin: 5px !important;
+    scroll-behavior: smooth;
+}
+
 .editorBody {
     border: 2px solid;
     border-top-right-radius: 5px;
@@ -8,10 +16,18 @@
     line-height: 1.5;
     transition: 0.1s;
     max-width: 100% !important;
-    caret-color: #999;
+    caret-color: #0000ff;
 }
 
 .editorBody:focus {
     padding: 4px;
     outline: none;
+}
+
+::selection {
+    background: gray;
+}
+
+.focused {
+    background: lightgray;
 }
