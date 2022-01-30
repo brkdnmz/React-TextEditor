@@ -1,15 +1,15 @@
 import Grid from "@mui/material/Grid";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import MainContext from "../MainContext";
 import Typography from "@mui/material/Typography";
 import styles from "./Gutter.module.css";
 
 function Gutter({ xs, bgcolor }) {
   const { fontSize, lineCount, focusedLines } = useContext(MainContext);
-  const [lines, setLines] = useState([]);
+  const [lineNumbers, setLineNumbers] = useState([]);
 
   useEffect(() => {
-    setLines(() =>
+    setLineNumbers(() =>
       [...Array(lineCount)].map((_, i) => (
         <div key={i} className={styles.lineNumber}>
           {i + 1}
@@ -19,22 +19,22 @@ function Gutter({ xs, bgcolor }) {
   }, [lineCount]);
 
   useEffect(() => {
-    setLines((lines) =>
-      lines.map((line, i) => {
+    setLineNumbers((lineNumbers) =>
+      lineNumbers.map((lineNumber, i) => {
         if (focusedLines[0] <= i && i <= focusedLines[1]) {
-          line = React.cloneElement(line, {
+          lineNumber = React.cloneElement(lineNumber, {
             style: {
               background: "lightgray",
             },
           });
         } else {
-          line = (
+          lineNumber = (
             <div key={i} className={styles.lineNumber}>
               {i + 1}
             </div>
           );
         }
-        return line;
+        return lineNumber;
       })
     );
   }, [focusedLines]);
@@ -48,7 +48,7 @@ function Gutter({ xs, bgcolor }) {
         textAlign={"end"}
         lineHeight={1.5}
       >
-        {lines}
+        {lineNumbers}
       </Typography>
     </Grid>
   );

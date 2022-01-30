@@ -14,7 +14,7 @@ function App() {
         item
         flexDirection={"column"}
         xs
-        md={6}
+        md={9}
         marginTop={"12%"}
         padding={1}
       >

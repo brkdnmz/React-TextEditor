@@ -6,7 +6,7 @@ import { FaItalic } from "@react-icons/all-files/fa/FaItalic";
 import FontSizeDisplay from "./FontSizeDisplay";
 import MainContext from "../MainContext";
 
-function EditorHeader(props) {
+function EditorHeader() {
   const { fontSize, increaseFont, decreaseFont } = useContext(MainContext);
   return (
     <>

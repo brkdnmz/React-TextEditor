@@ -8,4 +8,5 @@
 .gutter .lineNumber {
     transition: 0s;
     user-select: none;
+    padding: 0 5px;
 }

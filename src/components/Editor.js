@@ -1,5 +1,5 @@
 import Grid from "@mui/material/Grid";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import MainContext from "../MainContext";
 import Paper from "@mui/material/Paper";
 import EditorHeader from "./EditorHeader";
@@ -10,9 +10,9 @@ import {
   createEmptyLine,
   isEmpty,
   isText,
-  lineNumber,
   textLength,
 } from "../utils/Editor_utils";
+import EditorFooter from "./EditorFooter";
 
 function Editor() {
   const [fontSize, setFontSize] = useState(24);
@@ -20,36 +20,42 @@ function Editor() {
   const [lineCount, setLineCount] = useState(1);
   const [focusedLines, setFocusedLines] = useState([0, -1]);
   const [borderColor, setBorderColor] = useState("#eee");
+  const [cursorInfo, setCursorInfo] = useState({ curLine: 1, curCol: 1 });
 
   const editorRef = useRef({ current: null });
   const editorContainerRef = useRef({ current: null });
 
-  const increaseFont = () => {
+  const increaseFont = useCallback(() => {
     setFontSize((fontSize) => Math.min(100, fontSize + 4));
-  };
+  }, []);
 
-  const decreaseFont = () => {
+  const decreaseFont = useCallback(() => {
     setFontSize((fontSize) => Math.max(12, fontSize - 4));
-  };
+  }, []);
 
-  const updateScrollTop = () => {
-    const editorContainer = editorContainerRef.current;
-    const lineHeight = fontSize * 1.5;
-    editorContainer.scrollTop = Math.min(
-      editorContainer.scrollTop,
-      getCurLineIndex() * lineHeight
-    );
-    editorContainer.scrollTop = Math.max(
-      editorContainer.scrollTop,
-      (getCurLineIndex() + 1) * lineHeight - (editorContainer.clientHeight - 12)
-    );
-  };
+  const getCursorInfo = useCallback(() => {
+    const editor = editorRef.current;
+    const range = getSelection().getRangeAt(0);
+    return {
+      curLine:
+        Array.from(editor.childNodes).indexOf(
+          isText(range.startContainer)
+            ? range.startContainer.parentNode
+            : range.startContainer
+        ) + 1,
+      curCol: range.startOffset + 1,
+    };
+  }, []);
 
-  const getLineIndex = (line) => {
+  const updateCursorInfo = useCallback(() => {
+    setCursorInfo(() => getCursorInfo());
+  }, [getCursorInfo]);
+
+  const getLineIndex = useCallback((line) => {
     return Array.from(editorRef.current.childNodes).indexOf(line);
-  };
+  }, []);
 
-  const getCurLineIndex = () => {
+  const getCurLineIndex = useCallback(() => {
     const sel = getSelection();
     let firstLine = sel.anchorNode;
     let lastLine = sel.focusNode;
@@ -60,28 +66,73 @@ function Editor() {
     if (getLineIndex(firstLine) < getLineIndex(lastLine))
       return getLineIndex(lastLine);
     return getLineIndex(lastLine);
-  };
+  }, [getLineIndex]);
 
-  const updateCursorPos = (newCursorInfo) => {
+  const updateScroll = useCallback(() => {
     const editor = editorRef.current;
+    const editorContainer = editorContainerRef.current;
     const range = getSelection().getRangeAt(0);
-    let targetLine = editor.childNodes[newCursorInfo.lineIndex];
+    const lineHeight = fontSize * 1.5;
 
-    if (isText(targetLine.firstChild)) {
-      targetLine = targetLine.firstChild;
+    const minScrollTop = getCurLineIndex() * lineHeight;
+    const maxScrollTop =
+      (getCurLineIndex() + 1) * lineHeight +
+      ($(editor).outerHeight(true) - $(editor).height()) - // border + padding + margin
+      $(editorContainer).height();
+
+    editorContainer.scrollTop = Math.min(
+      editorContainer.scrollTop,
+      minScrollTop
+    );
+    editorContainer.scrollTop = Math.max(
+      editorContainer.scrollTop,
+      maxScrollTop
+    );
+
+    let minScrollLeft = 0;
+    let maxScrollLeft = 0;
+
+    if (isText(range.startContainer)) {
+      minScrollLeft =
+        (range.startOffset / textLength(range.startContainer)) *
+        $(range.startContainer.parentNode).width();
+      maxScrollLeft =
+        (range.startOffset / textLength(range.startContainer)) *
+        $(range.startContainer.parentNode).width();
+      maxScrollLeft -= $(editor).width();
     }
 
-    range.setStart(targetLine, newCursorInfo.offset);
-    range.setEnd(targetLine, newCursorInfo.offset);
+    editor.scrollLeft = Math.min(editor.scrollLeft, minScrollLeft);
+    editor.scrollLeft = Math.max(editor.scrollLeft, maxScrollLeft);
+  }, [fontSize, getCurLineIndex]);
 
-    updateScrollTop();
-  };
+  const updateCursorPos = useCallback(
+    (newCursorInfo) => {
+      const editor = editorRef.current;
+      const range = getSelection().getRangeAt(0);
+      let targetLine = editor.childNodes[newCursorInfo.lineIndex];
 
-  const updateLineCount = () => {
+      if (isText(targetLine.firstChild)) {
+        targetLine = targetLine.firstChild;
+      }
+
+      range.setStart(targetLine, newCursorInfo.offset);
+      range.setEnd(targetLine, newCursorInfo.offset);
+
+      updateScroll();
+      setCursorInfo(() => ({
+        curLine: newCursorInfo.lineIndex + 1,
+        curCol: newCursorInfo.offset + 1,
+      }));
+    },
+    [updateScroll]
+  );
+
+  const updateLineCount = useCallback(() => {
     setLineCount(() => editorRef.current.childNodes.length);
-  };
+  }, []);
 
-  const eraseSelectedRange = () => {
+  const eraseSelectedRange = useCallback(() => {
     const range = getSelection().getRangeAt(0);
     let startLine = range.startContainer;
     let endLine = range.endContainer;
@@ -129,147 +180,162 @@ function Editor() {
     };
 
     updateCursorPos(newCursorInfo);
+  }, [getLineIndex, updateCursorPos]);
+
+  const handleClick = () => {
+    updateScroll();
   };
 
-  const handleKeyDown = (e) => {
-    if (e.ctrlKey) return;
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.ctrlKey) return;
+      e.preventDefault();
 
-    e.preventDefault();
+      const editor = editorRef.current;
+      let range = getSelection().getRangeAt(0);
+      const selected = !range.collapsed;
 
-    const editor = editorRef.current;
-    let range = getSelection().getRangeAt(0);
-    const selected = !range.collapsed;
-
-    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && selected) {
-      eraseSelectedRange();
-      range = getSelection().getRangeAt(0);
-    }
-
-    let cursorNode = range.startContainer; // if the range is collapsed, the cursor is in the startContainer
-
-    let newCursorInfo = {
-      lineIndex: getLineIndex(
-        !isText(cursorNode) ? cursorNode : cursorNode.parentNode
-      ),
-      offset: range.startOffset,
-    };
-
-    /* Valid character */
-    if (e.key.length === 1) {
-      newCursorInfo.offset++;
-
-      if (!isEmpty(cursorNode)) {
-        cursorNode.textContent =
-          cursorNode.textContent.slice(0, range.startOffset) +
-          e.key +
-          cursorNode.textContent.slice(range.startOffset);
-      } else {
-        cursorNode.textContent = e.key;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && selected) {
+        eraseSelectedRange();
+        range = getSelection().getRangeAt(0);
       }
-    } else if (e.key === "Backspace") {
-      if (!selected) {
-        if (range.startOffset) {
-          newCursorInfo.offset--;
 
+      let cursorNode = range.startContainer; // if the range is collapsed, the cursor is in the startContainer
+
+      let newCursorInfo = {
+        lineIndex: getLineIndex(
+          !isText(cursorNode) ? cursorNode : cursorNode.parentNode
+        ),
+        offset: range.startOffset,
+      };
+
+      /* Valid character */
+      if (e.key.length === 1) {
+        newCursorInfo.offset++;
+
+        if (!isEmpty(cursorNode)) {
           cursorNode.textContent =
-            cursorNode.textContent.slice(0, range.startOffset - 1) +
+            cursorNode.textContent.slice(0, range.startOffset) +
+            e.key +
             cursorNode.textContent.slice(range.startOffset);
-
-          if (!cursorNode.textContent) {
-            cursorNode.parentNode.innerHTML = "<br>";
-          }
         } else {
-          if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
+          cursorNode.textContent = e.key;
+        }
+      } else if (e.key === "Backspace") {
+        if (!selected) {
+          if (range.startOffset) {
+            newCursorInfo.offset--;
 
-          if (cursorNode.previousSibling) {
+            cursorNode.textContent =
+              cursorNode.textContent.slice(0, range.startOffset - 1) +
+              cursorNode.textContent.slice(range.startOffset);
+
+            if (!cursorNode.textContent) {
+              cursorNode.parentNode.innerHTML = "<br>";
+            }
+          } else {
+            if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
+
+            if (cursorNode.previousSibling) {
+              newCursorInfo.lineIndex--;
+              newCursorInfo.offset = textLength(cursorNode.previousSibling);
+
+              const combinedNode = createEmptyLine();
+
+              if (
+                !isEmpty(cursorNode) ||
+                !isEmpty(cursorNode.previousSibling)
+              ) {
+                combinedNode.textContent =
+                  cursorNode.previousSibling.textContent +
+                  cursorNode.textContent;
+              }
+
+              cursorNode.previousSibling.remove();
+              editor.insertBefore(combinedNode, cursorNode);
+              cursorNode.remove();
+            }
+          }
+        }
+      } else if (e.key === "Enter") {
+        newCursorInfo.lineIndex++;
+        newCursorInfo.offset = 0;
+
+        if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
+
+        let leftPart = document.createElement("div");
+        leftPart.textContent = cursorNode.textContent.slice(
+          0,
+          range.startOffset
+        );
+
+        let rightPart = document.createElement("div");
+        rightPart.textContent = cursorNode.textContent.slice(range.startOffset);
+
+        if (isEmpty(leftPart)) leftPart = createEmptyLine();
+        if (isEmpty(rightPart)) rightPart = createEmptyLine();
+
+        editor.insertBefore(leftPart, cursorNode);
+        editor.insertBefore(rightPart, cursorNode);
+
+        cursorNode.remove();
+      } else if (e.key === "ArrowLeft") {
+        if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
+
+        if (!selected) {
+          if (range.startOffset) {
+            newCursorInfo.offset--;
+          } else if (cursorNode.previousSibling) {
             newCursorInfo.lineIndex--;
             newCursorInfo.offset = textLength(cursorNode.previousSibling);
-
-            const combinedNode = createEmptyLine();
-
-            if (!isEmpty(cursorNode) || !isEmpty(cursorNode.previousSibling)) {
-              combinedNode.textContent =
-                cursorNode.previousSibling.textContent + cursorNode.textContent;
-            }
-
-            cursorNode.previousSibling.remove();
-            editor.insertBefore(combinedNode, cursorNode);
-            cursorNode.remove();
           }
         }
-      }
-    } else if (e.key === "Enter") {
-      newCursorInfo.lineIndex++;
-      newCursorInfo.offset = 0;
+      } else if (e.key === "ArrowRight") {
+        if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
 
-      if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
-
-      let leftPart = document.createElement("div");
-      leftPart.textContent = cursorNode.textContent.slice(0, range.startOffset);
-
-      let rightPart = document.createElement("div");
-      rightPart.textContent = cursorNode.textContent.slice(range.startOffset);
-
-      if (isEmpty(leftPart)) leftPart = createEmptyLine();
-      if (isEmpty(rightPart)) rightPart = createEmptyLine();
-
-      editor.insertBefore(leftPart, cursorNode);
-      editor.insertBefore(rightPart, cursorNode);
-
-      cursorNode.remove();
-    } else if (e.key === "ArrowLeft") {
-      if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
-
-      if (!selected) {
-        if (range.startOffset) {
-          newCursorInfo.offset--;
-        } else if (cursorNode.previousSibling) {
-          newCursorInfo.lineIndex--;
-          newCursorInfo.offset = textLength(cursorNode.previousSibling);
+        if (!selected) {
+          if (range.startOffset !== cursorNode.textContent.length) {
+            newCursorInfo.offset++;
+          } else if (cursorNode.nextSibling) {
+            newCursorInfo.lineIndex++;
+            newCursorInfo.offset = 0;
+          }
+        } else {
+          newCursorInfo = {
+            lineIndex: getLineIndex(
+              !isText(range.endContainer)
+                ? range.endContainer
+                : range.endContainer.parentNode
+            ),
+            offset: range.endOffset,
+          };
         }
       }
-    } else if (e.key === "ArrowRight") {
-      if (isText(cursorNode)) cursorNode = cursorNode.parentNode;
 
-      if (!selected) {
-        if (range.startOffset !== cursorNode.textContent.length) {
-          newCursorInfo.offset++;
-        } else if (cursorNode.nextSibling) {
-          newCursorInfo.lineIndex++;
-          newCursorInfo.offset = 0;
-        }
-      } else {
-        newCursorInfo = {
-          lineIndex: getLineIndex(
-            !isText(range.endContainer)
-              ? range.endContainer
-              : range.endContainer.parentNode
-          ),
-          offset: range.endOffset,
-        };
-      }
-    }
-
-    updateCursorPos(newCursorInfo);
-    updateLineCount();
-  };
+      updateCursorPos(newCursorInfo);
+      updateLineCount();
+    },
+    [eraseSelectedRange, getLineIndex, updateCursorPos, updateLineCount]
+  );
 
   /**
    * Initialize the editor with an empty line
    */
   useEffect(() => {
-    const editor = editorRef.current;
+    let editor = editorRef.current;
     editor.innerHTML = "<div><br></div>";
+    editor.style.display = "inline";
   }, []);
 
   /**
    * Initialize onSelectionChange
    */
   useEffect(() => {
+    const editor = editorRef.current;
+
     $(document).on("selectionchange", () => {
       if (!getSelection().rangeCount) return;
 
-      const editor = editorRef.current;
       const range = getSelection().getRangeAt(0);
       let firstLine = range.startContainer;
       let lastLine = range.endContainer;
@@ -287,12 +353,14 @@ function Editor() {
       }
 
       setFocusedLines(() => [first, last]);
+
+      updateCursorInfo();
     });
 
     return () => {
-      $(editorRef.current).off("selectionchange");
+      $(editor).off("selectionchange");
     };
-  }, []);
+  }, [getLineIndex, updateCursorInfo]);
 
   useEffect(() => {
     const lines = editorRef.current.childNodes;
@@ -306,16 +374,16 @@ function Editor() {
   }, [focusedLines]);
 
   useEffect(() => {
-    if (!editorRef.current) return;
-
     const handleHover = () => {
       if ($(editorRef.current).is(":focus")) return;
       setBorderColor("#ccc");
+      setPaperElevation(3);
     };
 
     const handleUnHover = () => {
       if ($(editorRef.current).is(":focus")) return;
       setBorderColor("#eee");
+      setPaperElevation(1);
     };
 
     const handleFocus = () => {
@@ -329,32 +397,25 @@ function Editor() {
       setFocusedLines([]);
     };
 
-    const elem = editorRef.current;
+    const editor = editorRef.current;
 
-    $(elem).hover(
-      () => handleHover(),
-      () => handleUnHover()
-    );
-
-    $(elem).focus(() => handleFocus());
-
-    $(elem).blur(() => handleBlur());
+    $(editor).hover(handleHover, handleUnHover);
+    $(editor).focus(handleFocus);
+    $(editor).blur(handleBlur);
 
     return () => {
-      $(elem).off("mouseenter mouseleave focus blur");
+      $(editor).off("mouseenter mouseleave focus blur");
     };
   }, []);
 
   useEffect(() => {
-    if (!editorRef.current) return;
-
     const editor = editorRef.current;
     const wheelHandler = (e) => {
       if (!e.ctrlKey) return;
 
       e.preventDefault();
 
-      if (e.deltaY > 0) {
+      if (e.originalEvent.deltaY > 0) {
         decreaseFont();
       } else {
         increaseFont();
@@ -365,7 +426,7 @@ function Editor() {
     return () => {
       $(editor).off("mousewheel");
     };
-  }, []);
+  }, [decreaseFont, increaseFont]);
 
   const data = {
     fontSize,
@@ -374,6 +435,7 @@ function Editor() {
     decreaseFont,
     lineCount,
     focusedLines,
+    cursorInfo,
   };
 
   return (
@@ -408,12 +470,12 @@ function Editor() {
               ref={editorRef}
               fontSize={fontSize}
               onKeyDown={(e) => handleKeyDown(e)}
-              onPaste={() => updateLineCount()}
-              onClick={() => updateScrollTop()}
+              onClick={handleClick}
             />
           </Grid>
         </Grid>
       </Paper>
+      <EditorFooter />
     </MainContext.Provider>
   );
 }

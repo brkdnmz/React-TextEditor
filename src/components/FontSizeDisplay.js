@@ -9,8 +9,8 @@ import Tooltip from "@mui/material/Tooltip";
 import Zoom from "@mui/material/Zoom";
 import { CgArrowsVAlt } from "@react-icons/all-files/cg/CgArrowsVAlt";
 
-function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
-  const { setFontSize } = useContext(MainContext);
+function FontSizeDisplay() {
+  const { fontSize, setFontSize } = useContext(MainContext);
   const [timerId, setTimerId] = useState(0);
   const [intervalId, setIntervalId] = useState(0);
   const holdTimeout = 400;
@@ -121,7 +121,7 @@ function FontSizeDisplay({ fontSize, onFontIncrease, onFontDecrease }) {
                 textAlign={"justify"}
               >
                 <Typography variant={"body2"}>
-                  Increase/decrease the font size by 4 by clicking the arrows.
+                  Increase / decrease the font size by 4 by clicking the arrows.
                   Pressing and holding the arrows will keep the font size
                   increasing / decreasing.
                 </Typography>
