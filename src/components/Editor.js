@@ -51,29 +51,19 @@ function Editor() {
     return getLineIndex(lastLine);
   }, [getLineIndex]);
 
-  const updateCursorPos = useCallback(
-    (newCursorPos) => {
-      const editor = editorRef.current;
-      const range = getSelection().getRangeAt(0);
+  const updateCursorPos = useCallback((newCursorPos) => {
+    const editor = editorRef.current;
+    const range = getSelection().getRangeAt(0);
+    let targetLine = editor.childNodes[newCursorPos.line];
+    if (isText(targetLine.firstChild)) {
+      targetLine = targetLine.firstChild;
+    }
 
-      let targetLine =
-        editor.childNodes[newCursorPos ? newCursorPos.line : getCurLineIndex()];
-      if (isText(targetLine.firstChild)) {
-        targetLine = targetLine.firstChild;
-      }
+    range.setStart(targetLine, newCursorPos.column);
+    range.collapse(true);
 
-      if (newCursorPos) {
-        range.setStart(targetLine, newCursorPos.column);
-        range.collapse(true);
-      }
-
-      setCursorPos(() => ({
-        line: getCurLineIndex(),
-        column: range.startOffset,
-      }));
-    },
-    [getCurLineIndex]
-  );
+    setCursorPos(() => newCursorPos);
+  }, []);
 
   const updateScroll = useCallback(() => {
     const editor = editorRef.current;
@@ -176,8 +166,8 @@ function Editor() {
     if (startLine !== endLine) endLine.remove();
 
     const newCursorInfo = {
-      lineIndex: getLineIndex(combinedLine),
-      offset: startOffset,
+      line: getLineIndex(combinedLine),
+      column: startOffset,
     };
 
     updateCursorPos(newCursorInfo);
@@ -329,9 +319,20 @@ function Editor() {
     }
 
     updateFocusedLines(first, last);
-    updateCursorPos(null);
+    if (range.collapsed) {
+      updateCursorPos({
+        line: getCurLineIndex(),
+        column: range.startOffset,
+      });
+    }
     updateScroll();
-  }, [getLineIndex, updateCursorPos, updateFocusedLines, updateScroll]);
+  }, [
+    getCurLineIndex,
+    getLineIndex,
+    updateCursorPos,
+    updateFocusedLines,
+    updateScroll,
+  ]);
 
   /**
    * Initialize the editor with an empty line
