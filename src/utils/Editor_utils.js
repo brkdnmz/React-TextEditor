@@ -45,3 +45,7 @@ export const createEmptyLine = () => {
 export const isText = (node) => {
   return node.nodeType === Node.TEXT_NODE;
 };
+
+export const isBetween = (x, a, b) => {
+  return a <= x && x <= b;
+};

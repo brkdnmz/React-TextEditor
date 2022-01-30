@@ -6,11 +6,11 @@ import MainContext from "../MainContext";
 function EditorFooter() {
   const { cursorInfo } = useContext(MainContext);
   return (
-    <Grid container justifyContent={"end"}>
+    <Grid container justifyContent={"end"} style={{ userSelect: "none" }}>
       <Grid item paddingRight={1}>
         <Typography variant={"body1"} color={"white"}>
           <em>
-            Line: {cursorInfo.curLine} Column: {cursorInfo.curCol}
+            Line: {cursorInfo.line + 1} Column: {cursorInfo.column + 1}
           </em>
         </Typography>
       </Grid>

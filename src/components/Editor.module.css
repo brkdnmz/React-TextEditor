@@ -14,9 +14,10 @@
     white-space: pre;
     overflow: auto;
     line-height: 1.5;
-    transition: 0.1s;
     max-width: 100% !important;
     caret-color: #0000ff;
+    transition: 0.1s;
+    transition-property: border;
 }
 
 .editorBody:focus {

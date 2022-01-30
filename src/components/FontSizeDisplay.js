@@ -102,13 +102,23 @@ function FontSizeDisplay() {
   return (
     <>
       <Grid item display={"inline-flex"} xs justifyContent={"end"}>
-        <Typography variant="h4" style={{ userSelect: "none" }} color={"white"}>
+        <Typography
+          variant="h4"
+          style={{ userSelect: "none" }}
+          color={"white"}
+          fontWeight={300}
+        >
           Font size: {fontSize}
         </Typography>
       </Grid>
       <FontSizeAdjuster {...fontSizeAdjusterProps} />
       <Grid item display={"inline-flex"}>
-        <Typography variant="h4" style={{ userSelect: "none" }} color={"white"}>
+        <Typography
+          variant="h4"
+          style={{ userSelect: "none" }}
+          color={"white"}
+          fontWeight={300}
+        >
           px
           <Tooltip
             title={

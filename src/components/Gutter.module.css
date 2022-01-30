@@ -5,8 +5,12 @@
     transition: 0.1s;
 }
 
-.gutter .lineNumber {
+.gutter .lineNumber, .focused {
     transition: 0s;
     user-select: none;
     padding: 0 5px;
+}
+
+.focused {
+    background: lightgray;
 }
